@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Laravel\Socialite\Socialite;
 use Laravel\Socialite\Two\User as GoogleUser;
+use Laravel\Socialite\Two\InvalidStateException;
 use Mockery;
 use Tests\TestCase;
 
@@ -70,7 +71,7 @@ class ExampleTest extends TestCase
             'services.google.redirect' => 'http://localhost:8000/auth/google/callback',
         ]);
 
-        $response = $this->get('/auth/google')->assertRedirect();
+        $response = $this->get('http://localhost:8000/auth/google')->assertRedirect();
         $url = $response->headers->get('Location');
         $this->assertSame('accounts.google.com', parse_url($url, PHP_URL_HOST));
         parse_str(parse_url($url, PHP_URL_QUERY), $parametros);
@@ -94,6 +95,78 @@ class ExampleTest extends TestCase
         $usuario = Usuario::where('google_id', 'google-de-prueba')->firstOrFail();
         $this->assertAuthenticatedAs($usuario);
         $this->assertSame('google@example.com', $usuario->email);
+    }
+
+    public function test_acceso_desde_127_se_cambia_a_localhost_antes_de_crear_la_sesion_google(): void
+    {
+        config([
+            'services.google.client_id' => 'cliente-de-prueba',
+            'services.google.client_secret' => 'secreto-de-prueba',
+            'services.google.redirect' => 'http://localhost:8000/auth/google/callback',
+        ]);
+        $this->get('http://127.0.0.1:8000/auth/google')
+            ->assertRedirect('http://localhost:8000/auth/google');
+    }
+
+    private function simularCuentaGoogle(string $email, bool $verificado = true): void
+    {
+        $googleUser = (new GoogleUser())->setRaw(['email_verified' => $verificado])->map([
+            'id' => 'google-de-prueba',
+            'name' => 'Usuario Google',
+            'email' => $email,
+        ]);
+        $provider = Mockery::mock();
+        $provider->shouldReceive('user')->once()->andReturn($googleUser);
+        Socialite::shouldReceive('driver')->with('google')->once()->andReturn($provider);
+    }
+
+    public function test_cuenta_google_existente_inicia_sesion_sin_duplicarse(): void
+    {
+        $lista = $this->prepararLista();
+        $usuario = $lista->usuario;
+        $usuario->update(['google_id' => 'google-de-prueba']);
+        $this->simularCuentaGoogle($usuario->email);
+
+        $this->get('/auth/google/callback')->assertRedirect(route('listas.index'));
+        $this->assertAuthenticatedAs($usuario);
+        $this->assertSame(1, Usuario::count());
+    }
+
+    public function test_usuario_de_prueba_se_vincula_con_su_correo_google(): void
+    {
+        $lista = $this->prepararLista();
+        $usuario = $lista->usuario;
+        $this->simularCuentaGoogle($usuario->email);
+
+        $this->get('/auth/google/callback')->assertRedirect(route('listas.index'));
+        $this->assertAuthenticatedAs($usuario);
+        $this->assertSame('google-de-prueba', $usuario->fresh()->google_id);
+        $this->assertSame(1, Usuario::count());
+    }
+
+    public function test_cuenta_sin_correo_verificado_no_se_registra(): void
+    {
+        $this->prepararLista();
+        $this->simularCuentaGoogle('google@example.com', false);
+        $this->get('/auth/google/callback')->assertRedirect(route('login'))->assertSessionHasErrors('google');
+        $this->assertGuest();
+        $this->assertSame(1, Usuario::count());
+    }
+
+    public function test_error_de_sesion_google_permite_reintentar_el_login(): void
+    {
+        $provider = Mockery::mock();
+        $provider->shouldReceive('user')->once()->andThrow(new InvalidStateException());
+        Socialite::shouldReceive('driver')->with('google')->once()->andReturn($provider);
+
+        $this->get('/auth/google/callback')->assertRedirect(route('login'))->assertSessionHasErrors('google');
+        $this->assertGuest();
+    }
+
+    public function test_configuracion_google_incompleta_no_produce_error_500(): void
+    {
+        config(['services.google.client_id' => null, 'services.google.client_secret' => null]);
+        $this->get('/auth/google')->assertRedirect(route('login'))->assertSessionHasErrors('google');
     }
 
     public function test_lista_publica_se_consulta_sin_autenticacion(): void

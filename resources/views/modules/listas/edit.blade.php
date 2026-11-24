@@ -3,8 +3,7 @@
 @section('contenido')
     <div class="editor">
         <a class="link-dark" href="{{ route('listas.index') }}">← Mis listas</a>
-        <p class="etiqueta mt-4 mb-2">Ajusta los detalles</p>
-        <h1 class="mb-4">Editar lista</h1>
+        <h1 class="mt-4 mb-4">Editar lista</h1>
         <form class="panel" action="{{ route('listas.update', $lista) }}" method="POST">
             @csrf
             @method('PUT')

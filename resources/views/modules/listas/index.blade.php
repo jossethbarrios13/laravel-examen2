@@ -3,7 +3,6 @@
 @section('contenido')
     <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap mb-4">
         <div>
-            <p class="etiqueta mb-2">Tu espacio personal</p>
             <h1 class="mb-2">Mis listas</h1>
             <p class="text-secondary mb-0">Crea, organiza y actualiza tus elementos.</p>
         </div>
