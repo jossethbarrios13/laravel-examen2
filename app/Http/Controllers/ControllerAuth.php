@@ -5,7 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Usuario;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Laravel\Socialite\Facades\Socialite;
+use Laravel\Socialite\Socialite;
 use Laravel\Socialite\Two\InvalidStateException;
 use GuzzleHttp\Exception\GuzzleException;
 

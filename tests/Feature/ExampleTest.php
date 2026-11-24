@@ -7,6 +7,9 @@ use App\Models\Usuario;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Laravel\Socialite\Socialite;
+use Laravel\Socialite\Two\User as GoogleUser;
+use Mockery;
 use Tests\TestCase;
 
 class ExampleTest extends TestCase
@@ -59,6 +62,40 @@ class ExampleTest extends TestCase
         $this->get('/listas/create')->assertRedirect('/login');
     }
 
+    public function test_socialite_de_la_guia_redirige_a_google(): void
+    {
+        config([
+            'services.google.client_id' => 'cliente-de-prueba',
+            'services.google.client_secret' => 'secreto-de-prueba',
+            'services.google.redirect' => 'http://localhost:8000/auth/google/callback',
+        ]);
+
+        $response = $this->get('/auth/google')->assertRedirect();
+        $url = $response->headers->get('Location');
+        $this->assertSame('accounts.google.com', parse_url($url, PHP_URL_HOST));
+        parse_str(parse_url($url, PHP_URL_QUERY), $parametros);
+        $this->assertSame('http://localhost:8000/auth/google/callback', $parametros['redirect_uri']);
+        $this->assertNotEmpty($parametros['state']);
+    }
+
+    public function test_callback_de_google_registra_e_inicia_sesion(): void
+    {
+        $this->prepararLista();
+        $googleUser = (new GoogleUser())->setRaw(['email_verified' => true])->map([
+            'id' => 'google-de-prueba',
+            'name' => 'Usuario Google',
+            'email' => 'google@example.com',
+        ]);
+        $provider = Mockery::mock();
+        $provider->shouldReceive('user')->once()->andReturn($googleUser);
+        Socialite::shouldReceive('driver')->with('google')->once()->andReturn($provider);
+
+        $this->get('/auth/google/callback')->assertRedirect(route('listas.index'));
+        $usuario = Usuario::where('google_id', 'google-de-prueba')->firstOrFail();
+        $this->assertAuthenticatedAs($usuario);
+        $this->assertSame('google@example.com', $usuario->email);
+    }
+
     public function test_lista_publica_se_consulta_sin_autenticacion(): void
     {
         $lista = $this->prepararLista();
@@ -74,7 +111,7 @@ class ExampleTest extends TestCase
         $url = route('visitantes.show', $lista->token);
         $this->actingAs($lista->usuario)->get('/listas')->assertOk()
             ->assertSee($url, false)
-            ->assertSee('https://wa.me/?text='.rawurlencode('Te comparto mi lista: '.$url), false);
+            ->assertSee('https://wa.me/?text='.urlencode('Mira mi lista "'.$lista->titulo.'": '.$url), false);
     }
 
     public function test_visitante_marca_y_desmarca_el_item_y_se_actualiza_el_progreso(): void

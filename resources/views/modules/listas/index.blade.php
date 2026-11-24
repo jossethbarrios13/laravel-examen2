@@ -28,8 +28,12 @@
                                 <td><code class="token">{{ $lista->token }}</code></td>
                                 <td>
                                     <div class="d-flex justify-content-end flex-wrap gap-2">
-                                        <a href="{{ route('visitantes.show', ['token' => $lista->token]) }}" class="btn btn-outline-success btn-sm" target="_blank" rel="noopener" aria-label="Ver pública: {{ $lista->titulo }}">Ver pública</a>
-                                        <a href="https://wa.me/?text={{ rawurlencode('Te comparto mi lista: ' . route('visitantes.show', ['token' => $lista->token])) }}" class="btn btn-success btn-sm" target="_blank" rel="noopener" aria-label="Compartir {{ $lista->titulo }} por WhatsApp">WhatsApp</a>
+                                        <a href="{{ route('visitantes.show', $lista->token) }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-secondary">
+                                            <i class="bi bi-eye" aria-hidden="true"></i> Ver pública
+                                        </a>
+                                        <a href="https://wa.me/?text={{ urlencode('Mira mi lista "' . $lista->titulo . '": ' . route('visitantes.show', $lista->token)) }}" target="_blank" rel="noopener" class="btn btn-sm btn-outline-success">
+                                            <i class="bi bi-whatsapp" aria-hidden="true"></i> Compartir
+                                        </a>
                                         <a href="{{ route('listas.edit', $lista) }}" class="btn btn-outline-dark btn-sm" aria-label="Editar {{ $lista->titulo }}">Editar</a>
                                         <form action="{{ route('listas.destroy', $lista) }}" method="POST" onsubmit="return confirm('¿Eliminar esta lista y todos sus elementos? Esta acción no se puede deshacer.');">
                                             @csrf
