@@ -45,6 +45,7 @@
                             <input class="form-check-input item-check" type="checkbox"
                                    id="item-{{ $item->id_item }}"
                                    data-id="{{ $item->id_item }}"
+                                   data-update-url="{{ route('visitantes.update', ['token' => $lista->token, 'id_item' => $item->id_item]) }}"
                                    {{ $item->completado ? 'checked' : '' }}>
                             <label class="form-check-label {{ $item->completado ? 'text-decoration-line-through' : '' }}"
                                    for="item-{{ $item->id_item }}">
@@ -63,15 +64,13 @@
 </div>
 
 <script>
-    const token = "{{ $lista->token }}";
     const csrf = document.querySelector('meta[name="csrf-token"]').content;
 
     document.querySelectorAll('.item-check').forEach(function (check) {
         check.addEventListener('change', function () {
-            const idItem = check.dataset.id;
             const marcado = check.checked;
 
-            fetch(`/${token}/items/${idItem}`, {
+            fetch(check.dataset.updateUrl, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
