@@ -19,10 +19,11 @@
             <div class="table-responsive">
                 <table class="table align-middle mb-0">
                     <caption class="visually-hidden">Listas del usuario autenticado</caption>
-                    <thead><tr><th scope="col">Título</th><th scope="col">Token</th><th scope="col" class="text-end">Acciones</th></tr></thead>
+                    <thead><tr><th scope="col">#</th><th scope="col">Título</th><th scope="col">Token</th><th scope="col" class="text-end">Acciones</th></tr></thead>
                     <tbody>
                         @foreach ($data as $lista)
                             <tr>
+                                <th scope="row">{{ $loop->iteration }}</th>
                                 <td class="fw-semibold">{{ $lista->titulo }}</td>
                                 <td><code class="token">{{ $lista->token }}</code></td>
                                 <td>
